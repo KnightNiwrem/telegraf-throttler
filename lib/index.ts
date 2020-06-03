@@ -16,7 +16,7 @@ type ThrottlerOptions = {
   onThrottlerError?: ThrottlerErrorHandler,
 }
 
-const middlewareBuilder = (
+export const telegrafThrottler = (
   opts: ThrottlerOptions = {},
 ): MiddlewareFn<Context> => {
   const groupConfig: Bottleneck.ConstructorOptions = opts.group ?? {
@@ -79,4 +79,4 @@ const middlewareBuilder = (
   return middleware;
 };
 
-export default middlewareBuilder;
+export default telegrafThrottler;
