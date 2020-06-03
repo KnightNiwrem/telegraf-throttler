@@ -7,6 +7,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "prepublish": "tsc",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://github.com/KnightNiwrem/telegraf-throttler.git"
+  },
   "devDependencies": {
     "@types/lodash": "^4.14.154",
     "@types/node": "^14.0.9",
@@ -16,5 +20,11 @@
   "dependencies": {
     "bottleneck": "^2.19.5",
     "lodash": "^4.17.15"
-  }
+  },
+  "keywords": [
+    "telegraf",
+    "telegram",
+    "throttle",
+    "rate limit",
+  ]
 }
