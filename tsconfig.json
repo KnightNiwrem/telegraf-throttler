@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": false,
+    "baseUrl": ".",
+    "declaration": true,
+    "esModuleInterop": true,
+    "lib": ["ES2018"],
+    "module": "commonJS",
+    "moduleResolution": "Node",
+    "noImplicitAny": true,
+    "outDir": "dist",
+    "paths": {
+      "@lib/*": ["lib/*"],
+    },
+    "strict": true,
+    "target": "ES6"
+  },
+  "exclude": [
+    "dist",
+    "node_modules"
+  ],
+}
