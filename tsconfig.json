@@ -10,7 +10,7 @@
     "noImplicitAny": true,
     "outDir": "dist",
     "paths": {
-      "@lib/*": ["lib/*"],
+      "@src/*": ["src/*"],
     },
     "strict": true,
     "target": "ES6"

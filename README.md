@@ -59,11 +59,25 @@ const defaultErrorHandler = async (ctx, next, throttlerName, error) => {
 ```
 # Simple use case (Typescript)
 import { Telegraf } from 'telegraf';
-import buildThrottler from 'telegraf-throttler';
+import telegrafThrottler from 'telegraf-throttler';
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const throttler = buildThrottler();
+const throttler = telegrafThrottler();
+bot.use(throttler);
+
+bot.command('/example', ctx => ctx.reply('I am throttled'));
+bot.launch();
+```
+
+```
+# Simple use case (Javascript)
+const { Telegraf } = require('telegraf');
+const { telegrafThrottler } = require('telegraf-throttler');
+
+const bot = new Telegraf(process.env.BOT_TOKEN);
+
+const throttler = telegrafThrottler();
 bot.use(throttler);
 
 bot.command('/example', ctx => ctx.reply('I am throttled'));
@@ -73,12 +87,12 @@ bot.launch();
 ```
 # Custom use case (Typescript)
 import { Telegraf } from 'telegraf';
-import buildThrottler from 'telegraf-throttler';
+import telegrafThrottler from 'telegraf-throttler';
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 # 
-const throttler = buildThrottler({
+const throttler = telegrafThrottler({
   out: {
     minTime: 25,                     # Wait this many milliseconds to be ready, after a job
     reservoir: 3,                    # Number of new jobs that throttler will accept at start
