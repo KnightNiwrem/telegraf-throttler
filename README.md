@@ -22,7 +22,7 @@ type ThrottlerOptions = {
 
 The full list of object properties available for `Bottleneck.ConstructorOptions` can be found at [Bottleneck](https://github.com/SGrondin/bottleneck#constructor).
 
-If not argument is passed, the throttler created will use the default configuration settings which should be appropriate for most use cases. The default configuration are as follows:
+If no argument is passed, the throttler created will use the default configuration settings which should be appropriate for most use cases. The default configuration are as follows:
 ```
 # Outgoing Group Throttler
 const groupConfig = {
