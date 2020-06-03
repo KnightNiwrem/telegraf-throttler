@@ -16,6 +16,20 @@ type ThrottlerOptions = {
   onThrottlerError?: ThrottlerErrorHandler,
 }
 
+const WEBHOOK_BLACKLIST = [
+  'getChat',
+  'getChatAdministrators',
+  'getChatMember',
+  'getChatMembersCount',
+  'getFile',
+  'getFileLink',
+  'getGameHighScores',
+  'getMe',
+  'getUserProfilePhotos',
+  'getWebhookInfo',
+  'exportChatInviteLink'
+];
+
 export const telegrafThrottler = (
   opts: ThrottlerOptions = {},
 ): MiddlewareFn<Context> => {
@@ -54,10 +68,15 @@ export const telegrafThrottler = (
 
   const middleware: MiddlewareFn<Context> = async (ctx, next) => {
     const oldCallApi = ctx.telegram.callApi.bind(ctx.telegram);
-    ctx.telegram.callApi = async (method, data: { [key: string ]: any } = {}) => {
+
+    const newCallApi = async function(this: any, method: string, data: { [key: string]: any } = {}) {
       const { chat_id } = data;
       const chatId = Number(chat_id);
-      if (isNaN(chatId)) {
+      const hasEnabledWebhookReply = this.options.webhookReply;
+      const hasReponse = !!this.response;
+      const hasEndedReponse = this.responseEnd;
+      const isBlacklistedMethod = WEBHOOK_BLACKLIST.includes(method);
+      if (isNaN(chatId) || (hasEnabledWebhookReply && hasReponse && !hasEndedReponse && !isBlacklistedMethod)) {
         return oldCallApi(method, data);
       }
 
@@ -65,7 +84,8 @@ export const telegrafThrottler = (
       return throttler
         .schedule(() => oldCallApi(method, data))
         .catch(error => errorHandler(ctx, next, `Outbound ${chatId}`, error));
-    };
+    }
+    ctx.telegram.callApi = newCallApi.bind(ctx.telegram);
 
     const chatId = Number(ctx.chat?.id);
     if (isNaN(chatId)) {
