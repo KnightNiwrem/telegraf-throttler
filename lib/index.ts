@@ -45,12 +45,13 @@ const middlewareBuilder = (
   const outThrottler = new Bottleneck(outConfig);
   groupThrottler.on('created', throttler => throttler.chain(outThrottler));
 
-  const errorHandler = opts.onThrottlerError ?? async (
+  const defaultErrorHandler: ThrottlerErrorHandler = async (
     _ctx,
     _next,
     throttlerName,
-    error
+    error,
   ) => console.warn(`${throttlerName} | ${error.message}`);
+  const errorHandler: ThrottlerErrorHandler = opts.onThrottlerError ?? defaultErrorHandler;
 
   const middleware: MiddlewareFn<Context> = async (ctx, next) => {
     const oldCallApi = ctx.telegram.callApi.bind(ctx.telegram);

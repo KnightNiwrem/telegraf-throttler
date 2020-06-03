@@ -1,15 +1,17 @@
 {
   "name": "telegraf-throttler",
   "version": "0.1.0",
-  "description": "A middleware for Telegraf that throttles inbound updates from Telegram chats, and throttles outbound Telegram API request",
+  "description": "A middleware for Telegraf, that throttles inbound and outbound requests from Telegram",
   "author": "KnightNiwrem",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "prepublish": "tsc",
   "repository": {
     "type": "git",
     "url": "git+ssh://github.com/KnightNiwrem/telegraf-throttler.git"
+  },
+  "scripts": {
+    "prepare": "yarn tsc"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.154",
