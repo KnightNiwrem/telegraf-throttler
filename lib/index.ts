@@ -1,5 +1,4 @@
 import Bottleneck from 'bottleneck';
-import { isUndefined } from 'lodash';
 import type { Context } from 'telegraf';
 import type { MiddlewareFn } from 'telegraf/typings/composer';
 
@@ -68,8 +67,8 @@ const middlewareBuilder = (
         .catch(error => errorHandler(ctx, next, `Outbound ${chatId}`, error));
     };
 
-    const chatId = ctx.chat?.id;
-    if (isUndefined(chatId)) {
+    const chatId = Number(ctx.chat?.id);
+    if (isNaN(chatId)) {
       return next();
     }
     return inThrottler
