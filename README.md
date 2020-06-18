@@ -1,4 +1,7 @@
 # Telegraf Throttler
+
+[![Known Vulnerabilities](https://snyk.io/test/github/KnightNiwrem/telegraf-throttler/badge.svg)](https://snyk.io/test/github/KnightNiwrem/telegraf-throttler)
+
 Throttling middleware for [Telegraf](https://github.com/telegraf/telegraf) bot framework, written in [Typescript](https://www.typescriptlang.org/) and built with [Bottleneck](https://github.com/SGrondin/bottleneck).
 
 ## Installation
