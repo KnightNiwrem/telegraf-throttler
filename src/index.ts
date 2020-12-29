@@ -73,10 +73,10 @@ export const telegrafThrottler = (
       const { chat_id } = data;
       const chatId = Number(chat_id);
       const hasEnabledWebhookReply = this.options.webhookReply;
-      const hasReponse = !!this.response;
-      const hasEndedReponse = this.responseEnd;
+      const hasResponse = !!this.response;
+      const hasEndedResponse = this.responseEnd;
       const isBlacklistedMethod = WEBHOOK_BLACKLIST.includes(method);
-      if (isNaN(chatId) || (hasEnabledWebhookReply && hasReponse && !hasEndedReponse && !isBlacklistedMethod)) {
+      if (isNaN(chatId) || (hasEnabledWebhookReply && hasResponse && !hasEndedResponse && !isBlacklistedMethod)) {
         return oldCallApi(method, data);
       }
 
