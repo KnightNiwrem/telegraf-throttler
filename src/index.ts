@@ -83,7 +83,14 @@ export const telegrafThrottler = (
       const throttler = chatId > 0 ? outThrottler : groupThrottler.key(`${chatId}`);
       return throttler
         .schedule(() => oldCallApi(method, data))
-        .catch(error => errorHandler(ctx, next, `Outbound ${chatId}`, error));
+        .catch(error => {
+            if (error instanceof Bottleneck.BottleneckError) {
+              return errorHandler(ctx, next, `Outbound ${chatId}`, error);
+            } else {
+              throw error;
+            }
+          }
+        );
     }
     ctx.telegram.callApi = newCallApi.bind(ctx.telegram);
 
@@ -94,7 +101,13 @@ export const telegrafThrottler = (
     return inThrottler
       .key(`${chatId}`)
       .schedule(() => next())
-      .catch(error => errorHandler(ctx, next, `Inbound ${chatId}`, error));
+      .catch(error => {
+        if (error instanceof Bottleneck.BottleneckError) {
+          return errorHandler(ctx, next, `Inbound ${chatId}`, error);
+        } else {
+          throw error;
+        }
+      })
   };
   return middleware;
 };
