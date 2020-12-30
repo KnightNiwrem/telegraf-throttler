@@ -107,7 +107,7 @@ export const telegrafThrottler = (
         } else {
           throw error;
         }
-      })
+      });
   };
   return middleware;
 };
