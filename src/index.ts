@@ -73,17 +73,24 @@ export const telegrafThrottler = (
       const { chat_id } = data;
       const chatId = Number(chat_id);
       const hasEnabledWebhookReply = this.options.webhookReply;
-      const hasReponse = !!this.response;
-      const hasEndedReponse = this.responseEnd;
+      const hasResponse = !!this.response;
+      const hasEndedResponse = this.responseEnd;
       const isBlacklistedMethod = WEBHOOK_BLACKLIST.includes(method);
-      if (isNaN(chatId) || (hasEnabledWebhookReply && hasReponse && !hasEndedReponse && !isBlacklistedMethod)) {
+      if (isNaN(chatId) || (hasEnabledWebhookReply && hasResponse && !hasEndedResponse && !isBlacklistedMethod)) {
         return oldCallApi(method, data);
       }
 
       const throttler = chatId > 0 ? outThrottler : groupThrottler.key(`${chatId}`);
       return throttler
         .schedule(() => oldCallApi(method, data))
-        .catch(error => errorHandler(ctx, next, `Outbound ${chatId}`, error));
+        .catch(error => {
+            if (error instanceof Bottleneck.BottleneckError) {
+              return errorHandler(ctx, next, `Outbound ${chatId}`, error);
+            } else {
+              throw error;
+            }
+          }
+        );
     }
     ctx.telegram.callApi = newCallApi.bind(ctx.telegram);
 
@@ -94,7 +101,13 @@ export const telegrafThrottler = (
     return inThrottler
       .key(`${chatId}`)
       .schedule(() => next())
-      .catch(error => errorHandler(ctx, next, `Inbound ${chatId}`, error));
+      .catch(error => {
+        if (error instanceof Bottleneck.BottleneckError) {
+          return errorHandler(ctx, next, `Inbound ${chatId}`, error);
+        } else {
+          throw error;
+        }
+      })
   };
   return middleware;
 };
