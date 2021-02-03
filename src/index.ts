@@ -14,19 +14,13 @@ export type ThrottlerOptions = {
   inThrottlerError?: ThrottlerInErrorHandler,
 }
 
-const WEBHOOK_BLACKLIST = [
-  'getChat',
-  'getChatAdministrators',
-  'getChatMember',
-  'getChatMembersCount',
-  'getFile',
-  'getFileLink',
-  'getGameHighScores',
-  'getMe',
-  'getUserProfilePhotos',
-  'getWebhookInfo',
-  'exportChatInviteLink'
-];
+const WEBHOOK_REPLY_METHOD_ALLOWLIST = new Set<string>([
+  'answerCallbackQuery',
+  'answerInlineQuery',
+  'deleteMessage',
+  'leaveChat',
+  'sendChatAction',
+]);
 
 export const telegrafThrottler = (
   opts: ThrottlerOptions = {},
@@ -66,7 +60,7 @@ export const telegrafThrottler = (
   const middleware: Middleware<Context> = async (ctx, next) => {
     const oldCallApi = ctx.telegram.callApi.bind(ctx.telegram);
 
-    const newCallApi: typeof ctx.telegram.callApi = async function newCallApi(this: any, method, payload, { signal } = {}) {
+    const newCallApi: typeof ctx.telegram.callApi = async function newCallApi(this: typeof ctx.telegram, method, payload, { signal } = {}) {
       if (!('chat_id' in payload)) {
         return oldCallApi(method, payload, { signal });
       }
@@ -74,10 +68,10 @@ export const telegrafThrottler = (
       // @ts-ignore
       const chatId = Number(payload.chat_id);
       const hasEnabledWebhookReply = this.options.webhookReply;
-      const hasResponse = !!this.response;
-      const hasEndedResponse = this.responseEnd;
-      const isBlacklistedMethod = WEBHOOK_BLACKLIST.includes(method);
-      if (isNaN(chatId) || (hasEnabledWebhookReply && hasResponse && !hasEndedResponse && !isBlacklistedMethod)) {
+      // @ts-ignore
+      const hasEndedResponse = this.response?.writableEnded;
+      const isAllowedMethod = WEBHOOK_REPLY_METHOD_ALLOWLIST.has(method);
+      if (isNaN(chatId) || (hasEnabledWebhookReply && !hasEndedResponse && isAllowedMethod)) {
         return oldCallApi(method, payload, { signal });
       }
 
