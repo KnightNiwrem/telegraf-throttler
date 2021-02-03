@@ -1,19 +1,17 @@
 import Bottleneck from 'bottleneck';
-import type { Context } from 'telegraf';
-import type { MiddlewareFn } from 'telegraf/typings/composer';
+import type { Context, Middleware } from 'telegraf';
 
-type ThrottlerErrorHandler = (
+export type ThrottlerInErrorHandler = (
   ctx: Context,
   next: (ctx?: Context) => Promise<unknown>,
-  throttlerName: string,
   error: Error
 ) => Promise<unknown>
 
-type ThrottlerOptions = {
+export type ThrottlerOptions = {
   group?: Bottleneck.ConstructorOptions,
   in?: Bottleneck.ConstructorOptions,
   out?: Bottleneck.ConstructorOptions,
-  onThrottlerError?: ThrottlerErrorHandler,
+  inThrottlerError?: ThrottlerInErrorHandler,
 }
 
 const WEBHOOK_BLACKLIST = [
@@ -32,7 +30,7 @@ const WEBHOOK_BLACKLIST = [
 
 export const telegrafThrottler = (
   opts: ThrottlerOptions = {},
-): MiddlewareFn<Context> => {
+): Middleware<Context> => {
   const groupConfig: Bottleneck.ConstructorOptions = opts.group ?? {
     maxConcurrent: 1,
     minTime: 333,
@@ -41,10 +39,10 @@ export const telegrafThrottler = (
     reservoirRefreshInterval: 60000,
   };
   const inConfig: Bottleneck.ConstructorOptions = opts.in ?? {
-    highWater: 0,
+    highWater: 3,
     maxConcurrent: 1,
     minTime: 333,
-    strategy: Bottleneck.strategy.OVERFLOW,
+    strategy: Bottleneck.strategy.LEAK,
   };
   const outConfig: Bottleneck.ConstructorOptions = opts.out ?? {
     minTime: 25,
@@ -58,56 +56,53 @@ export const telegrafThrottler = (
   const outThrottler = new Bottleneck(outConfig);
   groupThrottler.on('created', throttler => throttler.chain(outThrottler));
 
-  const defaultErrorHandler: ThrottlerErrorHandler = async (
-    _ctx,
+  const defaultInErrorHandler: ThrottlerInErrorHandler = async (
+    ctx,
     _next,
-    throttlerName,
     error,
-  ) => console.warn(`${throttlerName} | ${error.message}`);
-  const errorHandler: ThrottlerErrorHandler = opts.onThrottlerError ?? defaultErrorHandler;
+  ) => console.warn(`Inbound ${ctx.from?.id || ctx.chat?.id} | ${error.message}`);
+  const errorHandler: ThrottlerInErrorHandler = opts.inThrottlerError ?? defaultInErrorHandler;
 
-  const middleware: MiddlewareFn<Context> = async (ctx, next) => {
+  const middleware: Middleware<Context> = async (ctx, next) => {
     const oldCallApi = ctx.telegram.callApi.bind(ctx.telegram);
 
-    const newCallApi = async function(this: any, method: string, data: { [key: string]: any } = {}) {
-      const { chat_id } = data;
-      const chatId = Number(chat_id);
+    const newCallApi: typeof ctx.telegram.callApi = async function newCallApi(this: any, method, payload, { signal } = {}) {
+      if (!('chat_id' in payload)) {
+        return oldCallApi(method, payload, { signal });
+      }
+
+      // @ts-ignore
+      const chatId = Number(payload.chat_id);
       const hasEnabledWebhookReply = this.options.webhookReply;
       const hasResponse = !!this.response;
       const hasEndedResponse = this.responseEnd;
       const isBlacklistedMethod = WEBHOOK_BLACKLIST.includes(method);
       if (isNaN(chatId) || (hasEnabledWebhookReply && hasResponse && !hasEndedResponse && !isBlacklistedMethod)) {
-        return oldCallApi(method, data);
+        return oldCallApi(method, payload, { signal });
       }
 
       const throttler = chatId > 0 ? outThrottler : groupThrottler.key(`${chatId}`);
-      return throttler
-        .schedule(() => oldCallApi(method, data))
-        .catch(error => {
-            if (error instanceof Bottleneck.BottleneckError) {
-              return errorHandler(ctx, next, `Outbound ${chatId}`, error);
-            } else {
-              throw error;
-            }
-          }
-        );
-    }
+      return throttler.schedule(() => oldCallApi(method, payload, { signal }));
+    };
     ctx.telegram.callApi = newCallApi.bind(ctx.telegram);
 
+    const fromId = Number(ctx.from?.id);
     const chatId = Number(ctx.chat?.id);
-    if (isNaN(chatId)) {
+    const inKey = fromId || chatId;
+    if (isNaN(inKey)) {
       return next();
     }
-    return inThrottler
-      .key(`${chatId}`)
-      .schedule(() => next())
-      .catch(error => {
-        if (error instanceof Bottleneck.BottleneckError) {
-          return errorHandler(ctx, next, `Inbound ${chatId}`, error);
-        } else {
-          throw error;
-        }
-      });
+    try {
+      return await inThrottler
+        .key(`${inKey}`)
+        .schedule(() => next());
+    } catch (error) {
+      if (error instanceof Bottleneck.BottleneckError) {
+        return errorHandler(ctx, next, error);
+      } else {
+        throw error;
+      }
+    }
   };
   return middleware;
 };
