@@ -1,7 +1,7 @@
 import Bottleneck from 'bottleneck';
 import type { Context, Middleware } from 'telegraf';
 
-export type ThrottlerInErrorHandler = (
+export type InThrottlerErrorHandler = (
   ctx: Context,
   next: (ctx?: Context) => Promise<unknown>,
   error: Error
@@ -11,7 +11,7 @@ export type ThrottlerOptions = {
   group?: Bottleneck.ConstructorOptions,
   in?: Bottleneck.ConstructorOptions,
   out?: Bottleneck.ConstructorOptions,
-  inThrottlerError?: ThrottlerInErrorHandler,
+  inThrottlerError?: InThrottlerErrorHandler,
 }
 
 const WEBHOOK_REPLY_METHOD_ALLOWLIST = new Set<string>([
@@ -50,12 +50,12 @@ export const telegrafThrottler = (
   const outThrottler = new Bottleneck(outConfig);
   groupThrottler.on('created', throttler => throttler.chain(outThrottler));
 
-  const defaultInErrorHandler: ThrottlerInErrorHandler = async (
+  const defaultInErrorHandler: InThrottlerErrorHandler = async (
     ctx,
     _next,
     error,
   ) => console.warn(`Inbound ${ctx.from?.id || ctx.chat?.id} | ${error.message}`);
-  const errorHandler: ThrottlerInErrorHandler = opts.inThrottlerError ?? defaultInErrorHandler;
+  const errorHandler: InThrottlerErrorHandler = opts.inThrottlerError ?? defaultInErrorHandler;
 
   const middleware: Middleware<Context> = async (ctx, next) => {
     const oldCallApi = ctx.telegram.callApi.bind(ctx.telegram);

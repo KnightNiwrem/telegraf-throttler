@@ -16,10 +16,10 @@ This throttler aims to throttle incoming updates from Telegram, and outgoing cal
 The throttler accepts a single optional argument of the following form:
 ```typescript
 type ThrottlerOptions = {
-  group?: Bottleneck.ConstructorOptions,    // For throttling outgoing group messages
-  in?: Bottleneck.ConstructorOptions,       // For throttling incoming messages
-  out?: Bottleneck.ConstructorOptions,      // For throttling outgoing private messages
-  onThrottlerError?: ThrottlerErrorHandler, // For custom throttler error handling
+  group?: Bottleneck.ConstructorOptions,      // For throttling outgoing group messages
+  in?: Bottleneck.ConstructorOptions,         // For throttling incoming messages
+  out?: Bottleneck.ConstructorOptions,        // For throttling outgoing private messages
+  inThrottlerError?: InThrottlerErrorHandler, // For custom inThrottler error handling
 }
 ```
 
@@ -38,10 +38,10 @@ const groupConfig = {
 
 // Incoming Throttler
 const inConfig = {
-  highWater: 0,                           // Trigger strategy if throttler is not ready for a new job
-  maxConcurrent: 1,                       // Only 1 job at a time
-  minTime: 333,                           // Wait this many milliseconds to be ready, after a job
-  strategy: Bottleneck.strategy.OVERFLOW, // Drop jobs if throttler is not ready
+  highWater: 3,                       // Trigger strategy if throttler is not ready for a new job
+  maxConcurrent: 1,                   // Only 1 job at a time
+  minTime: 333,                       // Wait this many milliseconds to be ready, after a job
+  strategy: Bottleneck.strategy.LEAK, // Drop jobs if throttler is not ready
 }
 
 // Outgoing Private Throttler
@@ -53,8 +53,8 @@ const outConfig = {
 };
 
 // Default Error Handler
-const defaultErrorHandler = async (ctx, next, throttlerName, error) => {
-  return console.warn(`${throttlerName} | ${error.message}`)
+const defaultErrorHandler = async (ctx, next, error) => {
+  return console.warn(`Inbound ${ctx.from?.id || ctx.chat?.id} | ${error.message}`)
 };
 ```
 
