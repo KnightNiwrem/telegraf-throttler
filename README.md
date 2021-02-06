@@ -19,6 +19,7 @@ type ThrottlerOptions = {
   group?: Bottleneck.ConstructorOptions,      // For throttling outgoing group messages
   in?: Bottleneck.ConstructorOptions,         // For throttling incoming messages
   out?: Bottleneck.ConstructorOptions,        // For throttling outgoing private messages
+  inKey?: 'from' | 'chat',                    // Throttle inbound by from.id (default) or chat.id
   inThrottlerError?: InThrottlerErrorHandler, // For custom inThrottler error handling
 }
 ```
@@ -95,12 +96,13 @@ import telegrafThrottler from 'telegraf-throttler';
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 const throttler = telegrafThrottler({
-  out: {
-    minTime: 25,                     // Wait this many milliseconds to be ready, after a job
-    reservoir: 3,                    // Number of new jobs that throttler will accept at start
-    reservoirRefreshAmount: 3,       // Number of jobs that throttler will accept after refresh
-    reservoirRefreshInterval: 10000, // Interval in milliseconds where reservoir will refresh
+  in: { // Aggresively drop inbound messages
+    highWater: 0,                       // Trigger strategy if throttler is not ready for a new job (default: LEAK)
+    maxConcurrent: 1,                   // Only 1 job at a time
+    minTime: 10000,                     // Wait this many milliseconds to be ready, after a job
+    strategy: Bottleneck.strategy.LEAK, // Drop jobs if throttler is not ready
   },
+  inKey: 'chat', // Throttle inbound messages by chat.id instead
 });
 bot.use(throttler);
 

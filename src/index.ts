@@ -11,6 +11,7 @@ export type ThrottlerOptions = {
   group?: Bottleneck.ConstructorOptions,
   in?: Bottleneck.ConstructorOptions,
   out?: Bottleneck.ConstructorOptions,
+  inKey?: 'from' | 'chat',
   inThrottlerError?: InThrottlerErrorHandler,
 }
 
@@ -44,6 +45,7 @@ export const telegrafThrottler = (
     reservoirRefreshAmount: 30,
     reservoirRefreshInterval: 1000,
   };
+  const inKey: 'from' | 'chat' = opts.inKey ?? 'from';
 
   const groupThrottler = new Bottleneck.Group(groupConfig);
   const inThrottler = new Bottleneck.Group(inConfig);
@@ -54,7 +56,7 @@ export const telegrafThrottler = (
     ctx,
     _next,
     error,
-  ) => console.warn(`Inbound ${ctx.from?.id || ctx.chat?.id} | ${error.message}`);
+  ) => console.warn(`Inbound ${inKey} | ${error.message}`);
   const errorHandler: InThrottlerErrorHandler = opts.inThrottlerError ?? defaultInErrorHandler;
 
   const middleware: Middleware<Context> = async (ctx, next) => {
@@ -80,16 +82,13 @@ export const telegrafThrottler = (
     };
     ctx.telegram.callApi = newCallApi.bind(ctx.telegram);
 
-    const fromId = Number(ctx.from?.id);
-    const chatId = Number(ctx.chat?.id);
-    const inKey = fromId || chatId;
-    if (isNaN(inKey)) {
+    const inKeyId = inKey === 'chat' ? Number(ctx.chat?.id) : Number(ctx.from?.id);
+    if (isNaN(inKeyId)) {
       return next();
     }
     try {
-      return await inThrottler
-        .key(`${inKey}`)
-        .schedule(() => next());
+      const throttler = inThrottler.key(`${inKeyId}`);
+      return await throttler.schedule(() => next());
     } catch (error) {
       if (error instanceof Bottleneck.BottleneckError) {
         return errorHandler(ctx, next, error);
