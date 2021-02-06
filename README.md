@@ -63,7 +63,7 @@ const defaultErrorHandler = async (ctx, next, error) => {
 ```typescript
 // Simple use case (Typescript)
 import { Telegraf } from 'telegraf';
-import telegrafThrottler from 'telegraf-throttler';
+import { telegrafThrottler } from 'telegraf-throttler';
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -90,21 +90,26 @@ bot.launch();
 
 ```typescript
 // Custom use case (Typescript)
-import { Telegraf } from 'telegraf';
-import telegrafThrottler from 'telegraf-throttler';
+import { Composer, Context, Middleware, Telegraf } from 'telegraf';
+import { telegrafThrottler } from 'telegraf-throttler';
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const throttler = telegrafThrottler({
+const privateThrottler = telegrafThrottler();
+const groupThrottler = telegrafThrottler({
   in: { // Aggresively drop inbound messages
-    highWater: 0,                       // Trigger strategy if throttler is not ready for a new job (default: LEAK)
+    highWater: 0,                       // Trigger strategy if throttler is not ready for a new job
     maxConcurrent: 1,                   // Only 1 job at a time
-    minTime: 10000,                     // Wait this many milliseconds to be ready, after a job
-    strategy: Bottleneck.strategy.LEAK, // Drop jobs if throttler is not ready
+    minTime: 30000,                      // Wait this many milliseconds to be ready, after a job
   },
   inKey: 'chat', // Throttle inbound messages by chat.id instead
 });
-bot.use(throttler);
+
+const partitioningMiddleware: Middleware<Context> = (ctx, next) => {
+  const chatId = Number(ctx.chat?.id);
+  return Composer.optional(() => chatId < 0, groupThrottler, privateThrottler)(ctx, next);
+};
+bot.use(partitioningMiddleware);
 
 bot.command('/example', ctx => ctx.reply('I am seriously throttled!'));
 bot.launch();
