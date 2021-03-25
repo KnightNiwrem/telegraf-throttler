@@ -15,7 +15,15 @@ export type ThrottlerOptions = {
   inThrottlerError?: InThrottlerErrorHandler,
 }
 
-const WEBHOOK_REPLY_METHOD_ALLOWLIST = new Set<string>([
+const TELEGRAM_NO_GROUP_RATE_LIMIT_SET = new Set<string>([
+  'getChat',
+  'getChatAdministrators',
+  'getChatMembersCount',
+  'getChatMember',
+  'sendChatAction',
+]);
+
+const WEBHOOK_REPLY_METHOD_ALLOWSET = new Set<string>([
   'answerCallbackQuery',
   'answerInlineQuery',
   'deleteMessage',
@@ -72,12 +80,18 @@ export const telegrafThrottler = (
       const hasEnabledWebhookReply = this.options.webhookReply;
       // @ts-ignore
       const hasEndedResponse = this.response?.writableEnded;
-      const isAllowedMethod = WEBHOOK_REPLY_METHOD_ALLOWLIST.has(method);
-      if (isNaN(chatId) || (hasEnabledWebhookReply && !hasEndedResponse && isAllowedMethod)) {
+      const isAllowedMethod = WEBHOOK_REPLY_METHOD_ALLOWSET.has(method);
+      const isAllowedGroupMethod = TELEGRAM_NO_GROUP_RATE_LIMIT_SET.has(method);
+      const isGroup = chatId < 0;
+      if (
+        isNaN(chatId) || 
+        (hasEnabledWebhookReply && !hasEndedResponse && isAllowedMethod) ||
+        (isGroup && isAllowedGroupMethod)
+      ) {
         return oldCallApi(method, payload, { signal });
       }
 
-      const throttler = chatId > 0 ? outThrottler : groupThrottler.key(`${chatId}`);
+      const throttler = isGroup ? groupThrottler.key(`${chatId}`) : outThrottler;
       return throttler.schedule(() => oldCallApi(method, payload, { signal }));
     };
     ctx.telegram.callApi = newCallApi.bind(ctx.telegram);
