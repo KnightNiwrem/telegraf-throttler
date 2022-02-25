@@ -7,6 +7,7 @@ Throttling middleware for [Telegraf](https://github.com/telegraf/telegraf) bot f
 ## Installation
 ```
 npm install telegraf-throttler
+# or
 yarn add telegraf-throttler
 ```
 
