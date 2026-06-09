@@ -29,5 +29,9 @@
     "telegram",
     "throttle",
     "rate limit"
-  ]
+  ],
+  "homepage": "https://github.com/KnightNiwrem/telegraf-throttler#readme",
+  "bugs": {
+    "url": "https://github.com/KnightNiwrem/telegraf-throttler/issues"
+  }
 }
